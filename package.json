@@ -1,7 +1,16 @@
-"dependencies": {
-  "express": "^4.18.2",
-  "cors": "^2.8.5",
-  "multer": "^1.4.5-lts.1",
-  "axios": "^1.4.0",
-  "form-data": "^4.0.0"
+{
+  "name": "esref-usta-api",
+  "version": "1.0.0",
+  "description": "Esref Usta QR Menu API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "axios": "^1.4.0",
+    "form-data": "^4.0.0"
+  }
 }
