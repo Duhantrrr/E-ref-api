@@ -1,7 +1,7 @@
 {
   "name": "esref-usta-api",
   "version": "1.0.0",
-  "description": "Esref Usta QR Menu API - MongoDB & ImgBB Integration",
+  "description": "Premium QR Menu API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
