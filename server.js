@@ -11,7 +11,7 @@ app.use(express.json());
 
 // --- AYARLAR ---
 const MONGO_URI = "mongodb+srv://duhantural2429_db_user:d8UKJ7gimz6tLUt5@cluster0.4x2bbc3.mongodb.net/esrefusta?retryWrites=true&w=majority&appName=Cluster0";
-const IMGBB_API_KEY = '5f1853678205dfce150c01e32e81a98e';
+const IMGBB_API_KEY = "5f1853678205dfce150c01e32e81a98e";
 const ADMIN_PASS = "DuhanTural24";
 
 // MongoDB Bağlantısı
@@ -28,20 +28,21 @@ const UrunSchema = new mongoose.Schema({
 });
 const Urun = mongoose.model('Urun', UrunSchema);
 
+// Resimleri Bellekte Tutma (Multer)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// 1. ÜRÜNLERİ LİSTELE
+// 1. ÜRÜNLERİ LİSTELE (Müşteriler için)
 app.get('/api/urunler', async (req, res) => {
     try {
         const urunler = await Urun.find();
         res.json(urunler);
     } catch (err) {
-        res.status(500).json({ mesaj: "Hata oluştu" });
+        res.status(500).json({ mesaj: "Hata" });
     }
 });
 
-// 2. ÜRÜN EKLE / GÜNCELLE
+// 2. ÜRÜN EKLE / GÜNCELLE + IMGBB YÜKLEME
 app.post('/api/urunler', upload.single('gorsel'), async (req, res) => {
     const { ad, fiyat, kategori, sifre } = req.body;
     if (sifre !== ADMIN_PASS) return res.status(401).json({ mesaj: "Yetkisiz" });
@@ -55,24 +56,12 @@ app.post('/api/urunler', upload.single('gorsel'), async (req, res) => {
             resimLink = imgbbRes.data.data.url;
         }
 
+        // Ürün varsa güncelle, yoksa yeni oluştur
         const filtre = { ad: new RegExp(`^${ad}$`, 'i') };
-        const guncelleme = { 
-            fiyat: Number(fiyat), 
-            kategori: kategori 
-        };
+        const guncelleme = { fiyat: Number(fiyat), kategori: kategori };
         if (resimLink) guncelleme.img = resimLink;
 
-        const sonuc = await Urun.findOneAndUpdate(filtre, guncelleme, {
-            upsert: true,
-            new: true,
-            setDefaultsOnInsert: true
-        });
-
-        if (!sonuc.img) {
-            sonuc.img = "https://via.placeholder.com/150?text=Esref+Usta";
-            await sonuc.save();
-        }
-
+        const sonuc = await Urun.findOneAndUpdate(filtre, guncelleme, { upsert: true, new: true });
         res.json({ mesaj: "Başarılı", urun: sonuc });
     } catch (err) {
         res.status(500).json({ mesaj: "İşlem hatası" });
@@ -90,4 +79,4 @@ app.delete('/api/urunler/:id', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Sunucu aktif: ${PORT}`));
+app.listen(PORT, () => console.log(`Eşref Usta API Aktif: ${PORT}`));
