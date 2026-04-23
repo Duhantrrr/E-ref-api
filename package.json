@@ -1,7 +1,7 @@
 {
   "name": "esref-usta-api",
   "version": "1.0.0",
-  "description": "Premium QR Menu API",
+  "description": "Eşref Usta Premium Menu API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
