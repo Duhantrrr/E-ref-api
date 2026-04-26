@@ -2,22 +2,29 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const multer = require('multer');
-const axios = require('axios');
+const cloudinary = require('cloudinary').v2;
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- AYARLARIN ---
+// --- CLOUDINARY AYARLARI (Senin Bilgilerinle Güncellendi) ---
+cloudinary.config({ 
+  cloud_name: 'db9c3fs4o', 
+  api_key: '622731167898466', 
+  api_secret: 'nOb1TJ88PeTI61tPiLAViBe8z5c' 
+});
+
+// --- MONGODB VE ŞİFRE AYARLARI ---
 const MONGO_URI = "mongodb+srv://duhantural2429_db_user:d8UKJ7gimz6tLUt5@cluster0.4x2bbc3.mongodb.net/esrefusta?retryWrites=true&w=majority&appName=Cluster0";
-const IMGBB_API_KEY = "5f1853678205dfce150c01e32e81a98e";
 const ADMIN_PASS = "DuhanTural24";
 
 // MongoDB Bağlantısı
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("MongoDB Bağlandı ✅"))
-    .catch(err => console.error("MongoDB Bağlantı Hatası ❌:", err));
+    .then(() => console.log("Eşref Usta MongoDB Bağlandı ✅"))
+    .catch(err => console.error("MongoDB Hatası ❌:", err));
 
+// Ürün Şeması
 const UrunSchema = new mongoose.Schema({
     ad: { type: String, required: true },
     fiyat: { type: Number, required: true },
@@ -27,19 +34,20 @@ const UrunSchema = new mongoose.Schema({
 
 const Urun = mongoose.model('Urun', UrunSchema);
 
+// Resim yükleme motoru (RAM'de tutar)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// 1. ÜRÜNLERİ LİSTELE
+// 1. ÜRÜNLERİ LİSTELE (Müşteri Menüsü İçin)
 app.get('/api/urunler', async (req, res) => {
     try {
-        const veriler = await Urun.find();
-        res.json(veriler);
+        const urunler = await Urun.find();
+        res.json(urunler);
     } catch (err) {
-        res.status(500).json({ mesaj: "Veriler alınamadı" });
+        res.status(500).json({ mesaj: "Veriler çekilemedi" });
     }
 });
 
-// 2. ÜRÜN EKLE VEYA GÜNCELLE (YENİLENDİ 🚀)
+// 2. ÜRÜN EKLE VEYA GÜNCELLE + CLOUDINARY YÜKLEME
 app.post('/api/urunler', upload.single('gorsel'), async (req, res) => {
     const { ad, fiyat, kategori, sifre } = req.body;
 
@@ -50,15 +58,19 @@ app.post('/api/urunler', upload.single('gorsel'), async (req, res) => {
     try {
         let resimUrl = "";
         
-        // Fotoğraf seçildiyse ImgBB'ye hatasız gönderim yapıyoruz
+        // Eğer yeni fotoğraf seçildiyse Cloudinary'ye yükle
         if (req.file) {
-            const params = new URLSearchParams();
-            params.append('image', req.file.buffer.toString('base64'));
-
-            const imgbbRes = await axios.post(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, params);
-            resimUrl = imgbbRes.data.data.url;
+            const b64 = Buffer.from(req.file.buffer).toString("base64");
+            let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+            
+            const result = await cloudinary.uploader.upload(dataURI, {
+                folder: "esref_usta_menu",
+                resource_type: "auto"
+            });
+            resimUrl = result.secure_url;
         }
 
+        // Ürün ismine göre bul ve güncelle, yoksa yeni oluştur (Upsert)
         const filtre = { ad: new RegExp(`^${ad}$`, 'i') };
         const guncelleme = { 
             ad: ad,
@@ -68,10 +80,10 @@ app.post('/api/urunler', upload.single('gorsel'), async (req, res) => {
         if (resimUrl) guncelleme.img = resimUrl;
 
         const sonuc = await Urun.findOneAndUpdate(filtre, guncelleme, { upsert: true, new: true });
-        res.json({ mesaj: "Başarılı", urun: sonuc });
+        res.json({ mesaj: "Ürün Başarıyla Kaydedildi! ✅", urun: sonuc });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ mesaj: "Resim yükleme veya sunucu hatası oluştu!" });
+        console.error("Hata:", err);
+        res.status(500).json({ mesaj: "Cloudinary veya Sunucu hatası oluştu!" });
     }
 });
 
@@ -79,11 +91,11 @@ app.post('/api/urunler', upload.single('gorsel'), async (req, res) => {
 app.delete('/api/urunler/:id', async (req, res) => {
     try {
         await Urun.findByIdAndDelete(req.params.id);
-        res.json({ mesaj: "Ürün başarıyla silindi" });
+        res.json({ mesaj: "Ürün silindi" });
     } catch (err) {
         res.status(404).json({ mesaj: "Ürün bulunamadı" });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Sunucu aktif.`));
+app.listen(PORT, () => console.log(`API Aktif: ${PORT}`));
